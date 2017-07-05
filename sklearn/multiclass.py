@@ -49,7 +49,8 @@ from .utils.validation import check_is_fitted
 from .utils.validation import check_X_y, check_array
 from .utils.multiclass import (_check_partial_fit_first_call,
                                check_classification_targets,
-                               _ovr_decision_function)
+                               _ovr_decision_function,
+                               type_of_target)
 from .utils.metaestimators import _safe_split, if_delegate_has_method
 
 from .externals.joblib import Parallel
@@ -254,8 +255,12 @@ class OneVsRestClassifier(BaseEstimator, ClassifierMixin, MetaEstimatorMixin):
             # shown to outperform or match a dense label binarizer in all
             # cases and has also resulted in less or equal memory consumption
             # in the fit_ovr function overall.
+            # For calling .fit(), create a single sample with all labels
             self.label_binarizer_ = LabelBinarizer(sparse_output=True)
-            self.label_binarizer_.fit(self.classes_)
+            if type_of_target(y).startswith("multilabel"):
+                self.label_binarizer_.fit(np.ones((1, len(self.classes_))))
+            else:
+                self.label_binarizer_.fit(self.classes_)
 
         if len(np.setdiff1d(y, self.classes_)):
             raise ValueError(("Mini-batch contains {0} while classes " +
